@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Pulse — Live Newsroom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Shown only when the browser goes offline (see script.js "online"/"offline" listeners) -->
+  <div id="offlineBanner" class="offline-banner" hidden>⚠️ You're offline — showing cached data where available.</div>
+
+  <div class="sky" aria-hidden="true"></div>
+
+  <!-- ══════════════════════ HEADER ══════════════════════ -->
+  <header class="site-header">
+    <div class="site-header__top">
+      <div class="brand">
+        <span class="eyebrow">WX-01 · LIVE NEWSROOM</span>
+        <h1>The Pulse</h1>
+      </div>
+      <div class="header-controls">
+        <div class="search">
+          <input id="searchInput" type="text" placeholder="Filter on screen, or press Enter to search…" aria-label="Filter or search" />
+          <button id="searchGoBtn" class="search__go" type="button" title="Search this category">↵</button>
+        </div>
+        <button id="bookmarksToggle" class="icon-btn" title="Saved items" aria-label="Open saved items">🔖</button>
+        <button id="prefsToggle" class="icon-btn" title="Customize your Pulse" aria-label="Open preferences">⚙️</button>
+      </div>
+    </div>
+
+    <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="categoryNav">☰ Categories</button>
+
+    <nav class="categories" id="categoryNav" aria-label="News categories">
+      <button class="cat-btn" data-category="fashion" style="--accent: var(--c-fashion)">
+        <span class="cat-btn__icon">👗</span> Fashion
+      </button>
+      <button class="cat-btn" data-category="weather" style="--accent: var(--c-weather)">
+        <span class="cat-btn__icon">⛅</span> Weather
+      </button>
+      <button class="cat-btn" data-category="entertainment" style="--accent: var(--c-entertainment)">
+        <span class="cat-btn__icon">🎬</span> Entertainment
+      </button>
+      <button class="cat-btn" data-category="politics" style="--accent: var(--c-politics)">
+        <span class="cat-btn__icon">🏛️</span> Politics
+      </button>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ══════════════════════ TRENDING BANNER ══════════════════════ -->
+    <section class="trending" aria-label="Top trending news">
+      <div class="trending__head">
+        <span class="eyebrow">🔥 TOP TRENDING · REFRESHES HOURLY</span>
+        <div class="trending__controls">
+          <span id="trendingUpdated" class="trending__updated">—</span>
+          <button id="trendingRefresh" class="trending__refresh" title="Refresh now">↻</button>
+        </div>
+      </div>
+
+      <div class="trending__stage" id="trendingStage">
+        <p class="trending__loading" id="trendingLoading">Loading trending headlines…</p>
+      </div>
+
+      <div class="trending__dots" id="trendingDots"></div>
+    </section>
+
+    <!-- ══════════════════════ LIVE DASHBOARD ══════════════════════ -->
+    <section class="dashboard" aria-label="Live dashboard">
+      <div class="dashboard__head">
+        <span class="eyebrow">📊 LIVE DASHBOARD</span>
+        <h2>Your Snapshot, Right Now</h2>
+      </div>
+
+      <div class="dashboard__grid">
+
+        <div class="tile" id="tileWeather">
+          <div class="tile__head">
+            <span class="tile__label">📍 Local Weather</span>
+            <span class="tile__updated" id="dashWeatherUpdated">—</span>
+          </div>
+          <div class="tile__hero" id="dashWeatherHero">Detecting your location…</div>
+          <div class="tile__chart-wrap"><canvas id="weatherTrendChart"></canvas></div>
+          <p class="tile__caption">5-day forecast — line chart, because the story here is the trend over time.</p>
+        </div>
+
+        <div class="tile" id="tileHeadlines">
+          <div class="tile__head">
+            <span class="tile__label">📰 Top 5 Headlines</span>
+            <span class="tile__updated" id="dashHeadlinesUpdated">—</span>
+          </div>
+          <ol class="tile__list" id="dashHeadlinesList"><li class="tile__loading">Loading…</li></ol>
+          <p class="tile__caption">Raw list, deliberately — a ranked top-5 reads faster as text than as a chart.</p>
+        </div>
+
+        <div class="tile" id="tileMovies">
+          <div class="tile__head">
+            <span class="tile__label">🎬 Now Playing — Ratings</span>
+            <span class="tile__updated" id="dashMoviesUpdated">—</span>
+          </div>
+          <div class="tile__chart-wrap"><canvas id="movieRatingChart"></canvas></div>
+          <p class="tile__caption">Bar chart — best for comparing one number across several named items.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════ CATEGORY GRID ══════════════════════ -->
+    <section class="feed" aria-label="Category articles">
+      <div class="feed__head">
+        <h2 id="categoryTitle">Entertainment — Trending Today</h2>
+        <div class="feed__head-right">
+          <div class="view-toggle" id="viewToggle" role="group" aria-label="Switch between cards and chart view">
+            <button type="button" data-view="both" class="is-active">Both</button>
+            <button type="button" data-view="cards">Cards</button>
+            <button type="button" data-view="chart">Chart</button>
+          </div>
+          <p id="categoryStatus" class="feed__status" aria-live="polite"></p>
+          <button id="categoryRefreshBtn" class="icon-btn icon-btn--small" type="button" title="Force a fresh fetch (bypass cache)">↻</button>
+        </div>
+      </div>
+
+      <div class="filter-bar" id="filterBar"></div>
+
+      <div class="category-chart" id="categoryChartWrap" hidden>
+        <canvas id="categoryChart"></canvas>
+      </div>
+
+      <div class="grid" id="cardsGrid"></div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════ PREFERENCES MODAL ══════════════════════ -->
+  <div class="modal" id="prefsModal" hidden>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <span>Customize Your Pulse</span>
+        <button id="prefsClose" class="chat__close" aria-label="Close preferences">✕</button>
+      </div>
+      <form id="prefsForm" class="modal__body">
+        <label>
+          Default landing category
+          <select id="prefDefaultCategory">
+            <option value="entertainment">Entertainment</option>
+            <option value="weather">Weather</option>
+            <option value="fashion">Fashion</option>
+            <option value="politics">Politics</option>
+          </select>
+        </label>
+        <label>
+          Home city (seeds your weather comparisons)
+          <input id="prefHomeCity" type="text" placeholder="e.g. Lagos" />
+        </label>
+        <label>
+          Favorite movie genre
+          <select id="prefGenre">
+            <option value="">Any genre</option>
+          </select>
+        </label>
+        <button type="submit" class="modal__save">Save preferences</button>
+        <p class="modal__note">Saved to this browser only — nothing leaves your device.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ BOOKMARKS / SAVED ITEMS MODAL ══════════════════════ -->
+  <!-- Populated entirely by renderBookmarksPanel() in script.js — this is just the shell -->
+  <div class="modal" id="bookmarksModal" hidden>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <span>Saved Items</span>
+        <button id="bookmarksClose" class="chat__close" aria-label="Close saved items">✕</button>
+      </div>
+      <div id="bookmarksList" class="modal__body bookmarks__list">
+        <p class="modal__note">Nothing saved yet — tap ☆ on any card to bookmark it.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ CHAT WIDGET ══════════════════════ -->
+  <div class="chat" id="chat">
+    <button id="chatToggle" class="chat__toggle" aria-label="Open newsroom assistant">💬</button>
+    <div id="chatPanel" class="chat__panel" hidden>
+      <div class="chat__header">
+        <span>Newsroom Assistant</span>
+        <button id="chatClose" class="chat__close" aria-label="Close chat">✕</button>
+      </div>
+      <div id="chatMessages" class="chat__messages">
+        <div class="chat__msg chat__msg--bot">
+          Hi 👋 I can jump you to a category or tell you what's trending. Try "show weather" or "what's trending".
+        </div>
+      </div>
+      <form id="chatForm" class="chat__form" autocomplete="off">
+        <input id="chatInput" type="text" placeholder="Ask the newsroom…" aria-label="Message" required />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ DOCS / MODULES 1–4 ══════════════════════ -->
+  <footer class="docs">
+    <details>
+      <summary>Module 1 documentation — endpoint, response format &amp; use case</summary>
+      <div class="docs__body">
+        <h2>Endpoint used</h2>
+        <p>
+          <code>GET https://api.openweathermap.org/data/2.5/weather?q={city}&amp;units=metric&amp;appid={API_KEY}</code>
+        </p>
+        <h2>Response format</h2>
+        <p>JSON — <code>main.temp</code>, <code>main.humidity</code>, <code>weather[0].description</code>, etc.</p>
+        <h2>Use case</h2>
+        <p>A trip-planning app could flag packing changes per city using this same call.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Module 2 documentation — data handling, display &amp; privacy</summary>
+      <div class="docs__body">
+        <h2>How data is handled &amp; displayed</h2>
+        <p>
+          Fetched JSON is held only in memory and mapped straight onto DOM elements via
+          <code>textContent</code> — no reload, no storage of the response itself.
+        </p>
+        <h2>Privacy</h2>
+        <p>Only the typed city name is sent. No tracking, no cookies, no persisted search history.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Module 3 documentation — automation, filtering &amp; A/B testing</summary>
+      <div class="docs__body">
+        <h2>APIs used per category</h2>
+        <ul>
+          <li><strong>Fashion</strong> — NewsAPI <code>/v2/everything?q=fashion</code></li>
+          <li><strong>Weather</strong> — OpenWeatherMap <code>/data/2.5/weather</code></li>
+          <li><strong>Entertainment</strong> — TMDb <code>/3/trending/movie/day</code></li>
+          <li><strong>Politics</strong> — NewsAPI <code>/v2/everything?q=politics</code></li>
+        </ul>
+        <h2>NewsAPI localhost restriction — and its fix</h2>
+        <p>
+          NewsAPI's free tier blocks browser requests from anywhere but <code>localhost</code>, replying
+          <code>426 corsNotAllowed</code> instead of articles. <code>newsApiFetch()</code> detects that status
+          and automatically retries through a CORS proxy that fetches server-side, so Fashion, Politics, and
+          Trending work regardless of where the site is opened from.
+        </p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Module 4 documentation — visualization, personalization &amp; live dashboards</summary>
+      <div class="docs__body">
+
+        <h2>Dynamic input elements</h2>
+        <ul>
+          <li><strong>Main search bar</strong> — types twice as hard: it filters whatever's already on screen as you type, and if you press Enter (or tap ↵) it runs a live API search scoped to whichever category is active — a city/town on <strong>Weather</strong> fetches and adds that city's card, a term on <strong>Politics</strong>/<strong>Fashion</strong> searches NewsAPI within that topic, a title on <strong>Entertainment</strong> searches TMDb. In every case the existing cards (the major cities, the regular feed) stay on screen — search results are added alongside them, never in place of them.</li>
+          <li><strong>Weather</strong> — the filter bar's "add a city" box does the same city-add as the main search bar.</li>
+          <li><strong>Entertainment</strong> — a genre <code>&lt;select&gt;</code>, populated from TMDb's live genre list, re-queries <code>/discover/movie</code> on change.</li>
+          <li><strong>Fashion / Politics</strong> — a topic <code>&lt;select&gt;</code> narrows the NewsAPI query (e.g. politics → "elections").</li>
+        </ul>
+
+        <h2>Personalization</h2>
+        <p>
+          On load, <code>navigator.geolocation</code> requests the visitor's coordinates and fetches weather
+          directly by lat/lon for the dashboard's "Local Weather" tile — falling back to a default city if
+          permission is denied. A Preferences panel (⚙️) also lets a visitor set a default landing category,
+          a home city, and a favorite movie genre, saved in <code>localStorage</code> and applied on every
+          return visit.
+        </p>
+
+        <h2>Chart.js — mapping data to the right chart type</h2>
+        <ul>
+          <li><strong>Line</strong> — the 5-day forecast, because the point is change over time.</li>
+          <li><strong>Bar</strong> — movie ratings and city temperatures, because the point is comparing a number across named items.</li>
+          <li><strong>Doughnut</strong> — article count by news source, because the point is share-of-whole.</li>
+          <li><strong>Raw list</strong> — the top-5 headlines stay plain text; a ranked list of five items is already faster to scan than a chart would be. Not every number needs a chart.</li>
+        </ul>
+
+        <h2>Live dashboard mechanics</h2>
+        <p>
+          The Local Weather tile refetches every 10 minutes; the headlines tile updates whenever the trending
+          banner refreshes (hourly, or via its ↻ button); the movies tile refreshes hourly alongside Entertainment.
+          Each uses <code>setInterval</code> on its own schedule rather than one blanket page refresh, so a slow
+          feed never blocks the others.
+        </p>
+
+        <h2>Display mode toggle (optional)</h2>
+        <p>
+          A "Both / Cards / Chart" switch above the feed lets a visitor collapse to whichever view suits the
+          moment — the chart alone for a quick trend check, or cards alone to actually read. The setting
+          applies instantly via <code>applyViewMode()</code> without a re-fetch.
+        </p>
+
+        <h2>Mobile-friendly practices</h2>
+        <p>
+          The category nav collapses behind a "☰ Categories" toggle under 640px; the dashboard and card grids
+          drop from three/multi-column to a single column; charts use Chart.js's <code>responsive</code> mode
+          inside a fixed-height wrapper so they resize with their container instead of overflowing it.
+        </p>
+      </div>
+    </details>
+
+    <details>
+      <summary>A/B test — live tally</summary>
+      <div class="docs__body">
+        <div id="abPanel" class="ab-panel">Loading A/B stats…</div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Module 5 documentation — personalization, reliability &amp; performance</summary>
+      <div class="docs__body">
+
+        <h2>localStorage vs sessionStorage — used for different jobs</h2>
+        <p>
+          <strong>localStorage</strong> (survives closing the browser) holds anything that should follow the
+          visitor back next time: preferences, bookmarks, the A/B variant, and the response cache.
+          <strong>sessionStorage</strong> (cleared when the tab closes) holds only this-tab-right-now state —
+          which category and view mode you're on — so a page refresh mid-visit resumes exactly where you were,
+          but a fresh tab starts clean at your saved default.
+        </p>
+
+        <h2>Auto-filled forms</h2>
+        <p>
+          The Preferences form pre-fills every field from <code>localStorage</code> when opened. The main
+          search box and the weather "add a city" box also pre-fill with your last search per category —
+          convenient, but deliberately <em>not</em> auto-submitted, so returning to a tab never fires an API
+          call you didn't ask for.
+        </p>
+
+        <h2>Bookmarks / saved locations</h2>
+        <p>
+          A ☆ button on every card saves it to <code>localStorage</code> under a stable id (city name, TMDb id,
+          or article URL). The 🔖 panel lists everything saved, with one click to remove. Saved weather
+          locations are folded back into the city-comparison list automatically on your next visit.
+        </p>
+
+        <h2>Loading states, errors &amp; retry</h2>
+        <p>
+          Skeleton cards (pulsing placeholders) show immediately on every fetch instead of a blank grid. A
+          failed request gets one silent automatic retry before anything is shown to the user; if that also
+          fails, the grid shows a plain-language reason (offline, rate-limited, or blocked) plus a ↻ Retry
+          button. A banner appears the moment the browser goes offline and clears itself when it's back.
+        </p>
+
+        <h2>Managing API rate limits</h2>
+        <p>
+          <code>guardedFetch()</code> keeps a rolling timestamp log per API (OpenWeatherMap, TMDb, NewsAPI)
+          and refuses to send a request once a self-imposed ceiling is hit within its time window — the UI
+          shows "rate limit reached, try again shortly" instead of risking a real 429 from the provider.
+          Search and "add a city" buttons also briefly disable themselves after a click, so a double-tap
+          can't fire the same request twice.
+        </p>
+
+        <h2>Avoiding redundant calls</h2>
+        <p>
+          Every category result is cached in <code>localStorage</code> for 5 minutes, keyed by category +
+          filters (e.g. <code>weather:Lagos,London,...</code>). Switching Fashion → Weather → Fashion inside
+          that window reloads instantly from cache with zero network calls; a small ↻ next to the category
+          status forces a fresh fetch when you actually want one. Background refreshes (dashboard weather,
+          movies, trending) also skip themselves entirely when <code>document.visibilityState</code> shows
+          the tab isn't visible — a backgrounded tab burns no quota.
+        </p>
+
+        <h2>Debouncing &amp; throttling</h2>
+        <p>
+          The on-screen filter (typing in the search box) is debounced 150ms so fast typing doesn't re-scan
+          the DOM on every keystroke. Search and "add a city" actions are throttled with a 1-second cooldown
+          per button.
+        </p>
+      </div>
+    </details>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
